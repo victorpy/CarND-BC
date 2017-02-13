@@ -14,14 +14,6 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/placeholder.png "Model Visualization"
-[image2]: ./examples/placeholder.png "Grayscaling"
-[image3]: ./examples/placeholder_small.png "Recovery Image"
-[image4]: ./examples/placeholder_small.png "Recovery Image"
-[image5]: ./examples/placeholder_small.png "Recovery Image"
-[image6]: ./examples/placeholder_small.png "Normal Image"
-[image7]: ./examples/placeholder_small.png "Flipped Image"
-
 [histogram]: ./images/histo1.jpg
 [samples]: ./images/samples.jpg
 
@@ -162,7 +154,7 @@ Then i simulated the vehicle recovering from the left side and right sides of th
 Here you can see a histogram of the data set after the modification of the training set
 ![histogram][image3]
 
-To augment the data set, I also flipped images and adding random brightness to the images thinking that this would help improve the prediction. The flip because the udacity data the car is driving the other way than the simulator, the brightness is for the different light conditions on the road.  In ![image samples][samples], there is an image that has then been flipped and randomized brightness, and also resized to 64x64
+To augment the data set, I also flipped images and adding random brightness to the images thinking that this would help improve the prediction. The flip because the udacity data the car is driving the other way than the simulator, the brightness is for the different light conditions on the road.  In the image samples seen above, there is an image that has then been flipped and randomized brightness, and also resized to 64x64
 
 After the collection process, I had aproximately 22000 number of data points.
 

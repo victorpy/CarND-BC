@@ -22,6 +22,9 @@ The goals / steps of this project are the following:
 [image6]: ./examples/placeholder_small.png "Normal Image"
 [image7]: ./examples/placeholder_small.png "Flipped Image"
 
+[histogram]: ./images/histo1.jpg
+[samples]: ./images/samples.jpg
+
 ## Rubric Points
 ###Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
 
@@ -89,36 +92,85 @@ At the end of the process, the vehicle is able to drive autonomously around the 
 
 ####2. Final Model Architecture
 
-The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
+The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes 
 
-Here is a visualization of the architecture (note: visualizing the architecture is optional according to the project rubric)
+____________________________________________________________________________________________________
+Layer (type)                     Output Shape          Param #     Connected to                     
+====================================================================================================
+lambda_1 (Lambda)                (None, 64, 64, 3)     0           lambda_input_1[0][0]             
+____________________________________________________________________________________________________
+convolution2d_1 (Convolution2D)  (None, 30, 30, 24)    1824        lambda_1[0][0]                   
+____________________________________________________________________________________________________
+activation_1 (Activation)        (None, 30, 30, 24)    0           convolution2d_1[0][0]            
+____________________________________________________________________________________________________
+convolution2d_2 (Convolution2D)  (None, 13, 13, 36)    21636       activation_1[0][0]               
+____________________________________________________________________________________________________
+activation_2 (Activation)        (None, 13, 13, 36)    0           convolution2d_2[0][0]            
+____________________________________________________________________________________________________
+convolution2d_3 (Convolution2D)  (None, 5, 5, 48)      43248       activation_2[0][0]               
+____________________________________________________________________________________________________
+activation_3 (Activation)        (None, 5, 5, 48)      0           convolution2d_3[0][0]            
+____________________________________________________________________________________________________
+convolution2d_4 (Convolution2D)  (None, 3, 3, 64)      27712       activation_3[0][0]               
+____________________________________________________________________________________________________
+activation_4 (Activation)        (None, 3, 3, 64)      0           convolution2d_4[0][0]            
+____________________________________________________________________________________________________
+convolution2d_5 (Convolution2D)  (None, 1, 1, 64)      36928       activation_4[0][0]               
+____________________________________________________________________________________________________
+activation_5 (Activation)        (None, 1, 1, 64)      0           convolution2d_5[0][0]            
+____________________________________________________________________________________________________
+flatten_1 (Flatten)              (None, 64)            0           activation_5[0][0]               
+____________________________________________________________________________________________________
+dense_1 (Dense)                  (None, 256)           16640       flatten_1[0][0]                  
+____________________________________________________________________________________________________
+activation_6 (Activation)        (None, 256)           0           dense_1[0][0]                    
+____________________________________________________________________________________________________
+dropout_1 (Dropout)              (None, 256)           0           activation_6[0][0]               
+____________________________________________________________________________________________________
+dense_2 (Dense)                  (None, 100)           25700       dropout_1[0][0]                  
+____________________________________________________________________________________________________
+activation_7 (Activation)        (None, 100)           0           dense_2[0][0]                    
+____________________________________________________________________________________________________
+dropout_2 (Dropout)              (None, 100)           0           activation_7[0][0]               
+____________________________________________________________________________________________________
+dense_3 (Dense)                  (None, 64)            6464        dropout_2[0][0]                  
+____________________________________________________________________________________________________
+activation_8 (Activation)        (None, 64)            0           dense_3[0][0]                    
+____________________________________________________________________________________________________
+dropout_3 (Dropout)              (None, 64)            0           activation_8[0][0]               
+____________________________________________________________________________________________________
+dense_4 (Dense)                  (None, 16)            1040        dropout_3[0][0]                  
+____________________________________________________________________________________________________
+activation_9 (Activation)        (None, 16)            0           dense_4[0][0]                    
+____________________________________________________________________________________________________
+dense_5 (Dense)                  (None, 1)             17          activation_9[0][0]               
+====================================================================================================
+Total params: 181209
+____________________________________________________________________________________________________
 
-![alt text][image1]
+
 
 ####3. Creation of the Training Set & Training Process
 
-To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
+To capture good driving behavior, I used the udacity provided data sample. First, i balance the data using center lane driving. Here is an example image of center lane driving:
 
 ![alt text][image2]
 
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to .... These images show what a recovery looks like starting from ... :
+Then i simulated the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to drive on the center and recover when is going off the track. These images show how the left and right cameras images look like:
 
 ![alt text][image3]
 ![alt text][image4]
 ![alt text][image5]
 
 
-To augment the data sat, I also flipped images and angles thinking that this would ... For example, here is an image that has then been flipped:
+To augment the data sat, I also flipped images and adding random brightness to the images thinking that this would help improve the prediction. The flip because the udacity data the car is driving the other way than the simulator, the brightness is for the different light conditions on the road.  For example, here is an image that has then been flipped and randomized brightness, and also resized to 64x64:
 
 ![alt text][image6]
-![alt text][image7]
-
-Etc ....
-
-After the collection process, I had X number of data points. I then preprocessed this data by ...
 
 
-I finally randomly shuffled the data set and put Y% of the data into a validation set. 
+After the collection process, I had aproximately 22000 number of data points.
 
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
+I randomly shuffled the data set and i used no data into a validation set. 
+
+I used this training data for training the model. The ideal number of epochs was 16 as evidenced by trial and error, and testing in the simulator.
 

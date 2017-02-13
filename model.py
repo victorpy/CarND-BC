@@ -71,7 +71,7 @@ def data_generator(size,epochs):
 	while 1:
 		#reshuffle data every data generation
 		x_s,y_s = shuffle(X_train, y_train)
-		
+		count=0
 		while 1:	
 			random_i = randint(0,len(X_train)-1)
 			

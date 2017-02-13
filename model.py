@@ -1,10 +1,12 @@
 from keras.models import Sequential
-from keras.layers.core import Dense, Activation, Flatten, Dropout
+from keras.layers.core import Dense, Activation, Flatten, Dropout,  Lambda
 from keras.layers.convolutional import Convolution2D, Convolution1D
 from keras.layers.pooling import MaxPooling2D
 from keras.callbacks import ModelCheckpoint
-from keras.optimizers import SGD
+from keras.optimizers import SGD, Adam
 from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split
+import cv2
 import csv
 import random
 from random import randint
@@ -12,207 +14,256 @@ from PIL import Image
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
+from collections import Counter
 
 # Fix error with Keras and TensorFlow
 import tensorflow as tf
 tf.python.control_flow_ops = tf
 
+filepath = "udadata"
+datalist = []
 
-#features = []
-#labels = []
-#resize=(320, 160)
-resize=(160,80)
-
-def normalize_grayscale(image_data):
-    a = -0.5
-    b = 0.5
-    grayscale_min = 0
-    grayscale_max = 255
-    return a + ( ( (image_data - grayscale_min)*(b - a) )/( grayscale_max - grayscale_min ) )
-    
-def shuffle_train_file():
-	 #shuffle file lines
-	print("shuffling train file")
-	lines = open('data3/driving_log.csv').readlines()
-	random.shuffle(lines)
-	open('data3/driving_log.csv', 'w').writelines(lines)
-
-def shuffle_val_file():
-	print("shuffling val file")
-	lines = open('traindata5/driving_log.csv').readlines()
-	random.shuffle(lines)
-	open('traindata5/driving_log.csv', 'w').writelines(lines)
+correction=0.26
+##read csv
+#columns 'center', 'left', 'right', 'steering', 'throttle', 'brake', 'speed
+def read_csv():
+	data = []
+	with open(filepath+'/driving_log.csv', newline='') as csvfile:
+		reader = csv.reader(csvfile, delimiter=',')
+		print("Reading Images\n")
+		for row in reader:
+			if row[0] == 'center': 
+				continue
+			data.append(row)
+		return data			
 
 
-			
-def generate_images_from_file(filepath, maxim):
-	
-	while 1:
-		features = []
-		labels = []
-		count = 0;
+#get train data only center camera images
+def get_train_data(data):
+	x = []
+	y = []
+	for i in data:
+		x.append(i[0])#image path
+		y.append(float(i[3]))#steering angle
 		
-		with open(filepath+'/driving_log.csv', newline='') as csvfile:
-			reader = csv.reader(csvfile, delimiter=',')
-			print("Reading Images\n")			
-			for row in reader:
-				if row[0] == 'center': 
-					continue
-				#print(row[0]+' '+row[3])
-				for j in range(0,3):
-				#print(row[0]+' '+row[3])
-				#image = Image.open(filepath+'/'+row[randint(0,2)].strip())
-					image = Image.open(filepath+'/'+row[j].strip())
-					image = image.resize(resize, Image.BICUBIC)
-					rotate=randint(0,10)
-					#print(rotate)
-					if rotate >= 6:
-						#print("rotated")
-						image=image.rotate(180, resample=Image.BICUBIC)
-				#gray=randint(0,10)
-				#print(rotate)
-				#if gray >= 6:
-					#print("rotated")
-					#image=image.convert("L")
-				data = np.asarray( image, dtype="uint8" )
-				features.append(data)
-				labels.append(round(float(row[3]), 4))
-				count += 1
-					#if count >= maxim:
-					#	break
-				#yield (x , y)
-				if count >= maxim:
-					#print("in count "+str(count))
-					x = np.asarray(features)
-					x = normalize_grayscale(x)
-					y = np.asarray(labels, dtype=np.float32)
-					#print(y)
-					#print(row[0]+' '+str(x.shape))
-					x, y = shuffle(x, y)
-					features = []
-					labels = []
-					count = 0					
-					yield (x , y)
-					#break
-		x = np.array(features)
-		y = np.array(labels)
-		x, y = shuffle(x, y)
-		yield (x , y)	
-					
-					
-def generate_val_images_from_file(filepath, maxim):
+	return x,y
 	
+#create some random brightness on the image	
+def randomize_brightness(image):
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    rand = random.uniform(0.3,1.0)
+    image[:,:,2] = rand*image[:,:,2]
+    image = cv2.cvtColor(image, cv2.COLOR_HSV2RGB)
+    return image	
+
+def cvcrop(img):
+	shape=img.shape
+	return img[60:shape[0]-20, 0:shape[1]]
+	
+def cvflip(img, angle):
+	img = cv2.flip(img,1)
+	angle = angle * (-1)
+	return img, angle
+
+def data_generator(size,epochs):
+	x = []
+	y = []
 	while 1:
-		features = []
-		labels = []
-		count = 0;
-		#shuffle_train_file()
-		with open(filepath+'/driving_log.csv', newline='') as csvfile:
-			reader = csv.reader(csvfile, delimiter=',')
-			print("Reading Images\n")			
-			for row in reader:
-				if row[0] == 'center': 
-					continue
+		#reshuffle data every data generation
+		x_s,y_s = shuffle(X_train, y_train)
+		
+		while 1:	
+			random_i = randint(0,len(X_train)-1)
+			
+			image = cv2.imread(filepath+'/'+ x_s[random_i].strip())		
+			#crop image
+			image = cvcrop(image)
+			#resize 64x64
+			image = cv2.resize(image, (64,64))
+			
+			angle=y_s[random_i]				
+			
+			count += 1	
+			
+			#flip images randomly
+			flip=randint(0,1)
+			if flip == 1:
+				image,angle=cvflip(image,angle)			
+			
+			image = randomize_brightness(image)			
+			x.append(image)
+			try:#add some random angles modifications
+				y.append(angle * (1+ np.random.uniform(-0.11,0.11)))
+			except TypeError:
+				print(angle)		
+			
+			if count >= size:
+				break
+			
+		x_batch = np.asarray(x,dtype=np.float32)
+		y_batch = np.asarray(y,dtype=np.float32)
+		x = []
+		y = []
+		yield(x_batch,y_batch)
+		
+def get_balanced_data(data):
+	x = []
+	y = []
+	not_balanced = 1
+	maxcount = 1
+	while not_balanced:
+		for i in data:
+			angle = float(i[3])
+			
+			if y.count(angle) >= maxcount:
+				continue
+			else:
+				x.append(i[0])#image path
+				y.append(angle)#steering angle
 				
-				#for j in range(0,3):
-					#print(row[j]+' '+row[3])
-				#print(row[0]+' '+row[3])
-				image = Image.open(filepath+'/'+row[0].strip())
-				image = image.resize(resize, Image.ANTIALIAS)
-				data = np.asarray( image, dtype="uint8" )
-				features.append(data)
-				labels.append(round(float(row[3]), 4))
-				count += 1
-					#if count >= maxim:
-					#	break	
-				#yield (x , y)
-				if count >= maxim:								
-					x = np.asarray(features)
-					x = normalize_grayscale(x)
-					y = np.asarray(labels, dtype=np.float32)
-					#print(y)
-					#print(row[0]+' '+str(x.shape))
-					x, y = shuffle(x, y)
-					features = []
-					labels = []
-					count = 0
-					yield (x , y)
-					#break
+			not_balanced=0
+			if len(y)>0:
+				for j in y:
+					if y.count(j) < maxcount:
+						not_balanced = 1
+						
+	return x,y
 
-		x = np.array(features)
-		y = np.array(labels)
-		x, y = shuffle(x, y)
-		yield (x , y)	
+def get_wandering_simulation_data5(x,y):
+	x_ = []
+	y_ = []
+	for i in range(len(y)):
+		angle=y[i]
+		if angle > 0.12:
+			for z in range(1):
+				x_.append(x[i])#left image path
+				y_.append(angle + correction)#correct steering angle
+				
+				continue
+		
+		if angle < -0.12:
+			for z in range(1):
+				x_.append(x[i])#right image path
+				y_.append(angle - correction)#correct steering angle				
+				continue
+				
+	return x_,y_
+	
+def modelA():
+	shape = (64,64,3)
 
-#shape = (160,320,3)
-shape = (80,160,3)
+	#nvidia model based network
 
-model = Sequential()
-model.add(Convolution2D(32, 5, 5, input_shape=shape))
-model.add(Activation('relu'))
-model.add(Convolution2D(32, 5, 5, input_shape=shape))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
-
-model.add(Convolution2D(64,3,3))
-model.add(Activation('relu'))
-model.add(Convolution2D(64,3,3))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
-
-#model.add(Convolution2D(32,3,3))
-#model.add(Activation('relu'))
-#model.add(MaxPooling2D(pool_size=(2, 2)))
-#model.add(Dropout(0.25))
-
-#model.add(Convolution2D(8, 3, 3))
-#model.add(Activation('relu'))
-#model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
-
-model.add(Flatten())
-model.add(Dense(512))
-model.add(Activation('relu'))
-model.add(Dropout(0.25))
-#model.add(Dense(64))
-#model.add(Activation('relu'))
-model.add(Dense(32))
-model.add(Activation('relu'))
-#model.add(Dropout(0.5))
-model.add(Dense(1))
-#model.add(Activation('sigmoid'))
+	model = Sequential()
+	model.add(Lambda(lambda x: x/255.0 - 0.5, input_shape = shape))
+	model.add(Convolution2D(24, 5, 5, subsample=(2,2), border_mode="valid", init='he_normal'))
+	model.add(Activation('relu'))
+	model.add(Convolution2D(36, 5, 5, subsample=(2,2), border_mode="valid",init='he_normal'))
+	model.add(Activation('relu'))
+	model.add(Convolution2D(48, 5, 5, subsample=(2,2), border_mode="valid",init='he_normal'))
+	model.add(Activation('relu'))
+	model.add(Convolution2D(64, 3, 3, subsample=(1,1), border_mode="valid",init='he_normal'))
+	model.add(Activation('relu'))
+	model.add(Convolution2D(64, 3, 3, subsample=(1,1), border_mode="valid",init='he_normal'))
+	model.add(Activation('relu'))
+	#model.add(Dropout(0.5))
 
 
-#Compile and train the model
-#X_train, y_train = shuffle(X_train, y_train)
+	model.add(Flatten())
+	model.add(Dense(256))
+	model.add(Activation('relu'))
+	model.add(Dropout(0.5))
+	model.add(Dense(100))
+	model.add(Activation('relu'))
+	model.add(Dropout(0.5))
+	model.add(Dense(64))
+	model.add(Activation('relu'))
+	model.add(Dropout(0.5))
+	model.add(Dense(16))
+	model.add(Activation('relu'))
+	model.add(Dense(1))
+	
+	return model
+	
+def modelB():
+	model = Sequential()
+	model.add(Lambda(lambda x: x/127.5 - 1.0,input_shape=(64,64,3)))
+	model.add(Convolution2D(32, 8,8 ,border_mode='same', subsample=(4,4)))
+	model.add(Activation('relu'))
+	model.add(Convolution2D(64, 8,8 ,border_mode='same',subsample=(4,4)))
+	model.add(Activation('relu',name='relu2'))
+	model.add(Convolution2D(128, 4,4,border_mode='same',subsample=(2,2)))
+	model.add(Activation('relu'))
+	model.add(Convolution2D(128, 2,2,border_mode='same',subsample=(1,1)))
+	model.add(Activation('relu'))
+	model.add(Flatten())
+	model.add(Dropout(0.5))
+	model.add(Dense(128))
+	model.add(Activation('relu'))
+	model.add(Dropout(0.5))
+	model.add(Dense(128))
+	model.add(Dense(1))
+	model.summary()
+	
+	return model
+	
+def modelC():
+	shape = (64,64,3)
+	model = Sequential()
+	model.add(Convolution2D(32, 3, 3, input_shape = shape, border_mode='same', activation='relu'))
+	model.add(Convolution2D(64, 3, 3, border_mode='same', activation='relu'))
+	model.add(Dropout(0.5))
+	model.add(Convolution2D(128, 3, 3, border_mode='same', activation='relu'))
+	model.add(Convolution2D(256, 3, 3, border_mode='same', activation='relu'))
+	model.add(Dropout(0.5))
+	model.add(Flatten())
+	model.add(Dense(1024, activation='relu'))
+	model.add(Dense(512, activation='relu'))
+	model.add(Dense(128, activation='relu'))
+	model.add(Dense(1, name='output', activation='tanh'))
+	
+	return model
 
-#model.compile('adam', 'sparse_categorical_crossentropy', ['accuracy'])
-#sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-sgd = SGD(lr=0.0001, momentum=0.9)
-#model.compile(loss='mean_squared_error', optimizer=sgd, metrics=['accuracy'])
-model.compile(loss='mse', optimizer=sgd, metrics=['accuracy'])
-#model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
-#model.compile(loss='mse', optimizer='adamax', metrics=['accuracy'])
-#model.compile(loss='mse', optimizer='rmsprop', metrics=['accuracy'])
 
-filepath="model.h5"
+datalist = read_csv()
 
-shuffle_train_file()
-shuffle_val_file()
+#print(len(datalist))
 
-checkpoint = ModelCheckpoint(filepath, monitor='acc', verbose=1, save_best_only=True, mode='max')
-callbacks_list = [checkpoint]
+#balance de data set
+X_train, y_train = get_balanced_data(datalist)
+
+#upsample the balance data
+X_train = X_train * 100
+y_train = y_train * 100
+
+#create recovery data
+X_train_2, y_train_2 = get_wandering_simulation_data5(X_train,y_train)
+
+#Add recovery data to train data
+X_train = X_train + X_train_2  #+ X_train_3
+y_train = y_train + y_train_2  #+ y_train_3
+
+#shuffle data
+X_train, y_train = shuffle(X_train, y_train)
+
+#print(len(X_train))
+#print(len(y_train))
+
+#create model to use
+model = modelA()
+
+#optimizer
+adam = Adam(lr = 0.00001)# beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+
+#compile model
+model.compile(loss='mse', optimizer=adam)
+
+batch=128
+epochs=15
 
 
-
-trainlen = 32
-vallen=6
-epochs=1000
-
-#history = model.fit_generator(generate_images_from_file('data3',128), validation_data=generate_images_from_file('val_data',32), samples_per_epoch=128, nb_val_samples=32, nb_epoch=30, max_q_size=3, callbacks=callbacks_list)
-history = model.fit_generator(generate_images_from_file('data3',trainlen), validation_data=generate_val_images_from_file('traindata5',vallen), samples_per_epoch=trainlen, nb_val_samples=vallen, nb_epoch=epochs, max_q_size=1, nb_worker=1, callbacks=callbacks_list)
+#train model
+history = model.fit_generator(data_generator(batch,epochs), samples_per_epoch=len(X_train), nb_epoch=epochs, max_q_size=1, nb_worker=1)
 
 # serialize model to JSON
 print("Writing Model json")
@@ -221,8 +272,7 @@ with open("model.json", "w") as json_file:
     json_file.write(model_json)
     
 print("Writing Model h5")
-model.save_weights('model2.h5')
+model.save_weights('model.h5')
 
 
-print(history.history['val_acc'][-1])
-#print(history.history)
+

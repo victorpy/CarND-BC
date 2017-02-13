@@ -153,21 +153,16 @@ ________________________________________________________________________________
 
 ####3. Creation of the Training Set & Training Process
 
-To capture good driving behavior, I used the udacity provided data sample. First, i balance the data using center lane driving. Here is an example image of center lane driving:
+To capture good driving behavior, I used the udacity provided data sample. First, i balance the data using center lane driving. 
 
-![alt text][image2]
+Then i simulated the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to drive on the center and recover when is going off the track. Here is an example image of center lane driving, also images show the left and right cameras images look like:
 
-Then i simulated the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to drive on the center and recover when is going off the track. These images show how the left and right cameras images look like:
+![image samples][samples]
 
-![alt text][image3]
-![alt text][image4]
-![alt text][image5]
+Here you can see a histogram of the data set after the modification of the training set
+![histogram][image3]
 
-
-To augment the data sat, I also flipped images and adding random brightness to the images thinking that this would help improve the prediction. The flip because the udacity data the car is driving the other way than the simulator, the brightness is for the different light conditions on the road.  For example, here is an image that has then been flipped and randomized brightness, and also resized to 64x64:
-
-![alt text][image6]
-
+To augment the data set, I also flipped images and adding random brightness to the images thinking that this would help improve the prediction. The flip because the udacity data the car is driving the other way than the simulator, the brightness is for the different light conditions on the road.  In ![image samples][samples], there is an image that has then been flipped and randomized brightness, and also resized to 64x64
 
 After the collection process, I had aproximately 22000 number of data points.
 

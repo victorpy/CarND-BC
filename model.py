@@ -253,26 +253,20 @@ X_train, y_train = shuffle(X_train, y_train)
 model = modelA()
 
 #optimizer
-adam = Adam(lr = 0.00001)# beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-
+adam = Adam(lr = 0.00001)
 #compile model
 model.compile(loss='mse', optimizer=adam)
 
 batch=128
-epochs=15
+epochs=16
 
 
 #train model
 history = model.fit_generator(data_generator(batch,epochs), samples_per_epoch=len(X_train), nb_epoch=epochs, max_q_size=1, nb_worker=1)
 
 # serialize model to JSON
-print("Writing Model json")
-model_json = model.to_json()
-with open("model.json", "w") as json_file:
-    json_file.write(model_json)
-    
-print("Writing Model h5")
-model.save_weights('model.h5')
+print("Writing Model")
+model.save("model.h5")
 
 
 
